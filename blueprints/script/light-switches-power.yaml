@@ -10,7 +10,7 @@ blueprint:
     
     All lights and switches in a room are selected using jinja lists for the domains *light* and *switch*.
     A macro converts the names of lights and switches then to entity ids. You need to add the macro 
-    **`entids(nms)`** to the file **`my_macros.jinja`** in the sub-directory **`custom_templates`**.
+    **`entids(nms)`** to the file **macros.jinja`** in the sub-directory **`custom_templates`**.
     
     
     The status *on* or *off* is defined as a field in the generated script. Selecting **off** will switch **on**
@@ -80,10 +80,10 @@ sequence:
         'in', not_in) | selectattr('entity_id','in',area_entities(act_room)) |
         selectattr('state', 'eq', from_to) | map(attribute='name')  | unique | list }}
       entities_s: |
-        {% from 'my_macros.jinja' import entids %}
+        {% from 'macros.jinja' import entids %}
         {{ entids(nms_switch) }}
       entities_l: |
-        {% from 'my_macros.jinja' import entids %}
+        {% from 'macros.jinja' import entids %}
             {{ entids(nms_light) }}
 
   - if:
