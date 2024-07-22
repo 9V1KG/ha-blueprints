@@ -1,0 +1,135 @@
+blueprint:
+  name: Light and Switches Power on-off
+  description: >
+    # Light and Switches Power On-Off
+    
+    This blueprint script allows you to switch *on* or *off* all light and switches in a selected area (room).
+    A list of entities can be excluded from switching. As an advantage, later added lights
+    or switches to the room will automatically be included in the script.  
+    
+    
+    All lights and switches in a room are selected using jinja lists for the domains *light* and *switch*.
+    A macro converts the names of lights and switches then to entity ids. You need to add the macro 
+    **`entids(nms)`** to the file **`my_macros.jinja`** in the sub-directory **`custom_templates`**.
+    
+    
+    The status *on* or *off* is defined as a field in the generated script. Selecting **off** will switch **on**
+    all lights/switches, *i.e.* has to be provided as a **from-to** status. Accordingly, selecting *on* will
+    switch *off* all lights and switches.   
+    
+    
+    The blueprint can be used, for example, to switch off all non-essential lights and power 
+    outlets room by room, when you leave home.  
+    Take this blueprint, to generate a power-switch-on-off script for each room or area in your house.
+    
+  # source_url: https://github.com/9V1KG/...
+  author: Klaus 9V1KG
+  domain: script
+
+  input:
+
+    room:
+      selector:
+        area: {}
+      name: Room/Area
+      description: >
+        Select the area, where you want to switch **off** or **on** all lights
+        and power outlets (or other switches).
+      
+    ex_entid:
+      name: Excluded entities
+      description: >
+        Select those essential Entities, which should be **excluded from switching
+        off or on**, like for example a router, a NAS *etc.*
+      selector:
+        entity:
+          filter:
+            - domain: switch
+            - domain: light
+          multiple: true
+      default: []
+
+fields:
+  from_to:
+    name: Switch from - to opposite
+    selector:
+      select:
+        options:
+          - "on"
+          - "off"
+    default: "on"
+    description: >
+      When state equals 'off', turn on all switches and lights, when 'on', turn
+      off all.
+    required: true
+
+variables:
+  act_room: !input room
+  act_ex_entid: !input ex_entid
+
+sequence:
+  - variables:
+      not_in: >
+        {{ act_ex_entid }}
+      nms_switch: >
+        {{ states | selectattr('domain','in',['switch']) | rejectattr('entity_id',
+        'in', not_in) | selectattr('entity_id','in',area_entities(act_room)) |
+        selectattr('state', 'eq', from_to) | map(attribute='name')  | unique | list }}
+      nms_light: >
+        {{ states | selectattr('domain','in',['light']) | rejectattr('entity_id',
+        'in', not_in) | selectattr('entity_id','in',area_entities(act_room)) |
+        selectattr('state', 'eq', from_to) | map(attribute='name')  | unique | list }}
+      entities_s: |
+        {% from 'my_macros.jinja' import entids %}
+        {{ entids(nms_switch) }}
+      entities_l: |
+        {% from 'my_macros.jinja' import entids %}
+            {{ entids(nms_light) }}
+
+  - if:
+      - condition: template
+        value_template: "{{ from_to == 'off' }}"
+    then:
+      - if:
+          - condition: template
+            value_template: "{{ (nms_light | count) > 0 }}"
+        then:
+          - service: light.turn_on
+            target:
+              entity_id: |
+                {{ entities_l }}
+            data: {}
+            enabled: true
+      - if:
+          - condition: template
+            value_template: "{{ (nms_switch | count) > 0 }}"
+        then:
+          - service: switch.turn_on
+            target:
+              entity_id: |
+                {{ entities_s }}
+            data: {}
+            enabled: true
+    else:
+      - if:
+          - condition: template
+            value_template: "{{ (nms_light | count) > 0 }}"
+        then:
+          - service: light.turn_off
+            target:
+              entity_id: |
+                {{ entities_l }}
+            data: {}
+            enabled: true
+      - if:
+          - condition: template
+            value_template: "{{ (nms_switch | count) > 0 }}"
+        then:
+          - service: switch.turn_off
+            target:
+              entity_id: |
+                {{ entities_s }}
+            data: {}
+            enabled: true
+
+icon: mdi:light-switch-off
