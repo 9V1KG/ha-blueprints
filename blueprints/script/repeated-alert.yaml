@@ -4,12 +4,12 @@ blueprint:
     # Repeated Alert
     
     
-    This blueprint script makes repeated spoken alert announcements. It uses the script 
-    `Spoken Announcement`, which is based on the blueprint `Spoken Notification` with 
-    a selected announcement sound. The number of repititions can be set between 0 and 10.
-    When zero is selected, announcement will be done only once.
+    This blueprint script makes repeated spoken alert announcements and sends a notification
+    to the user. It uses the script `Spoken Announcement`, which is based on the blueprint 
+    `Spoken Notification` with a selected announcement sound. The number of repititions 
+    can be set between 0 and 10. When zero is selected, announcement will be done only once.
 
-  # source_url: https://github.com/9V1KG/...
+  source_url: https://github.com/9V1KG/ha-blueprints/blob/main/blueprints/script/repeated-alert.yaml
   author: Klaus 9V1KG
   domain: script
   input:
@@ -96,9 +96,15 @@ sequence:
                 - service: "{{ act_sn }}"
                   data:
                     message: Attention!  {{ message }}.
-          - service: "{{ act_sn }}"
-            data:
-              message: The Alert was reset.
+          - if:
+              - condition: state
+                entity_id: !input alarm_reset
+                state: "off"
+            then:
+              # only when alarm reset was toggled
+              - service: "{{ act_sn }}"
+                data:
+                  message: The Alert was reset.
         else:
           # Spoken Notification only once
           - service: "{{ act_sn }}"
@@ -106,7 +112,7 @@ sequence:
               message: Attention!  {{ message }}.        
   - if:
       - condition: state
-        entity_id: input_boolean.alarm_sound
+        entity_id: !input alarm_reset
         state: "on"
     then:
       - service: input_boolean.turn_off

@@ -1,0 +1,95 @@
+# Blueprint meta data
+blueprint:
+  name: Occupancy trigger and timing
+  # source_url: https://github.com/9V1KG/...
+  author: 9V1KG Klaus
+  homeassistant:
+    min_version: 2024.7.0
+  description: >
+    # Occupancy trigger and timing
+    
+    Select the triggers to start a timer for a selected time in minutes, and switch a boolean
+    input switch to *on*. Once, the timer has finished, the boolean input switch will be reset to *off*.
+
+  domain: automation
+  author: 9V1KG Klaus
+
+  input:
+    occ_switch:
+      name: Occupancy switch (Toggle switch). 
+      description: >
+        Select or define a toggle helper to be toggled to *on* while the occupancy timer is running.
+      selector:
+        entity:
+          filter:
+            - domain: input_boolean
+    
+    occ_timer:
+      name: Occupancy timer
+      description: >
+        Select the timer to be started when presence is triggered.
+      selector:
+        entity:
+          filter:
+            - domain: timer
+    occ_dur:
+      name: Timer run time in minutes
+      description: >
+        Dead time in minutes until occupancy switch will be turned off.
+      selector:
+        number:
+          min: 1
+          max: 15
+      default: 3
+
+    occ_trig:
+      name: Occupancy trigger
+      description: >
+        Select one or more sensors to trigger the occupancy switch and timer. 
+        **IMPORTANT** Select **motion** as trigger id
+      selector:
+        trigger:
+          
+variables:
+  act_occ_dur: !input occ_dur
+
+trigger: 
+  !input occ_trig
+
+action:
+  - if:
+      - condition: trigger
+        id:
+          - motion
+    then:
+      - if:
+        - condition: state
+          entity_id: !input occ_timer
+          state: idle
+        then:
+          - service: timer.start
+            data:
+              duration: >
+                00:{{ act_occ_dur }}
+            target:
+              entity_id: !input occ_timer
+          - service: input_boolean.turn_on
+            target:
+              entity_id: !input occ_switch
+        else:
+        # restart timer
+          - service: timer.cancel
+            target:
+              entity_id: !input occ_timer
+          - service: timer.start
+            data:
+              duration: >
+                00:{{ act_occ_dur }}
+            target:
+              entity_id: !input occ_timer
+    else:
+    # trigger must have been from timer
+      - service: input_boolean.turn_off
+        target:
+          entity_id: !input occ_switch
+
