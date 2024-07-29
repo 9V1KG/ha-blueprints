@@ -1,6 +1,7 @@
 # Blueprint meta data
 blueprint:
   name: Calendar Check In/Out
+  # source_url: https://github.com/9V1KG/...
   author: 9V1KG Klaus
   homeassistant:
     min_version: 2024.7.0
@@ -43,9 +44,7 @@ blueprint:
       end: "{{ now() }}"
     ```
 
-  # source_url: https://github.com/9V1KG/...
   domain: automation
-  author: 9V1KG Klaus
 
   input:
     base_input:
@@ -63,6 +62,7 @@ blueprint:
             entity:
               filter:
                 - domain: input_boolean
+                - domain: binary_sensor
 
         dt_check_in:
           name: Input Datetime Helper
