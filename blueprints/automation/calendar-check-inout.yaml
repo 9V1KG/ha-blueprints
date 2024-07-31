@@ -29,12 +29,38 @@ blueprint:
     and a title and description given in this blueprint, will be created in your selected calendar.  
     
     
+    ## Events fired
+    
+    The blueprint fires an event of the type `BP_CICO` (blue print check in check out) with id data based on the 
+    entity id (excl. domain) and `_on` for check in and `_off` for check out. You can use it as a trigger 
+    for your additional automations. For example, when your toggle on/off switch has the entity id 
+    `input_boolean.bp_toggle`, the event data `id` is `bp_toggle_on` resp. `bp_toggle_off` for check in/out.
+    The trigger in your automation should look like:  
+    
+    
+    ```
+    
+    trigger:
+      - platform: event
+        event_type: BP_CICO
+        event_data:
+          id: bp_toggle_on
+        id: check-in
+      - platform: event
+        event_type: BP_CICO
+        event_data:
+          id: bp_toggle_off
+        id: check-out
+    ```
+    
     ## Note
     
     To record the monthly duration of the check-in time, you might also use a sensor from the 'history_stats'
     platform. Example code for `sensors.yaml` (you need to adapt the entity id of your toggle switch):  
-        
+    
+              
     ```
+    
     - platform: history_stats
       name: "monthly check-in time"
       entity_id: input_boolean.toggle_switch
@@ -55,8 +81,9 @@ blueprint:
         toggle:
           name: Check in/out switch (Toggle switch). 
           description: >
-            Select or define a toggle helper to be toggled for check in and out. When the switch has
-            status 'on', you are checked in, when 'off', checked out.
+            Select or define either a binary sensor or a toggle helper to be toggled for check in and out.
+            When the sensor/switch changes the status from `off` to `on`, you will be checked in, 
+            when it changes from `on` to `off`, you will be checked out.
             *Type 'Create a new Toggle helper.' to create a new one.*
           selector:
             entity:
@@ -98,7 +125,18 @@ blueprint:
 
     calender_section:
       name: Calendar
+      description: >
+        Record the completed check in/check out process as an event into a calender.
       input:
+
+        cal_on:
+          name: Calendar event on/off
+          description:  >
+            Switch on, when you want to record a check-in/check-out event in the selected
+            calendar.
+          selector:
+            boolean:
+          default: on
 
         my_calendar:
           name: Calendar to be used
@@ -123,18 +161,12 @@ blueprint:
           selector:
             text:
           default: You have completed your check in and check out.
-        
-        cal_on:
-          name: Calendar event on/off
-          description:  >
-            Switch on, when you want to record a check-in/check-out event in the selected
-            calendar.
-          selector:
-            boolean:
-          default: on
-                        
+                                
     notify_section:
       name: Notifications
+      description: >
+        You can select, whether you want to receive a notification with or without an additional
+        spoken notification.
       input:
 
         alert_on:
@@ -245,7 +277,7 @@ action:
           - service: !input notify_service
             data:
               message: >
-                Check in is done!
+                {{ act_title }}: Check in done.
               title: !input cal_title
             enabled: !input alert_on
 
@@ -258,8 +290,14 @@ action:
               - service: "{{ spn_id }}"
                 data:
                   message: >
-                    {{ act_title }} has started.
-                  
+                    {{ act_title }}: Check in done..
+
+          - event: BP_CICO
+            event_data:
+              id: >
+                {{ act_tggl.split('.')[1]+'_on' }}
+                      
+# Check out
       - conditions:
           - condition: trigger
             id:
@@ -269,19 +307,31 @@ action:
               td: >
                 {{ ( as_timestamp(now())
                 -as_timestamp(states(act_dt_on))) // 60 }}
-
-          - service: input_number.set_value
-            data:
-              value: |
-                {{ states(act_min)|int + td }}
-            target:
-              entity_id: !input on_minutes
-
+            # minimum check in time is 1 minute.
+          - if:
+            - condition: template
+              value_template: > 
+                {{ td | int == 0 }}
+            then:
+              - service: input_number.set_value
+                data:
+                  value: |
+                    {{ states(act_min)|int + 1 }}
+                target:
+                  entity_id: !input on_minutes
+            else:
+              - service: input_number.set_value
+                data:
+                  value: |
+                    {{ states(act_min)|int + td }}
+                target:
+                  entity_id: !input on_minutes
+                  
             # Notification
           - service: !input notify_service
             data:
               message: >
-                Finished after {{ td | round(0) }} minutes.
+                {{ act_title }}: finished after {{ td | int }} minutes.
               title: !input cal_title
             enabled: !input alert_on
 
@@ -294,7 +344,7 @@ action:
               - service: "{{spn_id}}"
                 data:
                   message: >
-                    {{ act_title }}: finished after {{ td | round(0) }} minutes.
+                    {{ act_title }}: finished after {{ td | int }} minutes.
 
             # Calendar event
           - service: calendar.create_event
@@ -303,13 +353,18 @@ action:
             data:
               summary: !input cal_title
               description: >
-                {{ act_descr }} Duration: {{ td | round(0) }} min
+                {{ act_descr }} Duration: {{ td | int }} min
               start_date_time: |
                 {{ (as_datetime(states(act_dt_on))) }}
               end_date_time: |
                 {{ as_timestamp(now()) | timestamp_custom('%Y-%m-%d %H:%M:%S')}}
             enabled: !input cal_on
 
+          - event: BP_CICO
+            event_data:
+              id: >
+                {{ act_tggl.split('.')[1]+'_off' }}
+                
   - delay:
       hours: 0
       minutes: 0
