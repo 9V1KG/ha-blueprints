@@ -81,7 +81,7 @@ blueprint:
         toggle:
           name: Check in/out switch (Toggle switch). 
           description: >
-            Select or define either a binary sensor or a toggle helper to be toggled for check in and out.
+            Select or define either a binary sensor, switch or a toggle helper to be toggled for check in and out.
             When the sensor/switch changes the status from `off` to `on`, you will be checked in, 
             when it changes from `on` to `off`, you will be checked out.
             *Type 'Create a new Toggle helper.' to create a new one.*
@@ -90,6 +90,7 @@ blueprint:
               filter:
                 - domain: input_boolean
                 - domain: binary_sensor
+                - domain: switch
 
         dt_check_in:
           name: Input Datetime Helper
@@ -290,7 +291,7 @@ action:
               - service: "{{ spn_id }}"
                 data:
                   message: >
-                    {{ act_title }}: Check in done..
+                    {{ act_title }}: Check in done.
 
           - event: BP_CICO
             event_data:
