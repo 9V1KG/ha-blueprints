@@ -75,7 +75,13 @@ fields:
     name: message
     required: true
 
+variables:
+  act_mp: !input media-play
+
 sequence:
+  - variables:
+      act_playing: >
+        {{ is_state( act_mp,'playing') }}
   - if:
       - condition: state
         entity_id: !input say-on-off
@@ -107,6 +113,13 @@ sequence:
               message: >
                 {{message}}     
               media_player_entity_id: !input media-play
+          - if:
+              - condition: template
+                value_template: "{{ act_playing }}"
+            then:
+              - service: media_player.media_play
+                target:
+                  entity_id: !input media-play
         else:
           - stop: Media player not ready
 
