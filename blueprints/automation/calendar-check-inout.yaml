@@ -1,7 +1,7 @@
 # Blueprint meta data
 blueprint:
   name: Calendar Check In/Out
-  # source_url: https://github.com/9V1KG/...
+  source_url: https://github.com/9V1KG/ha-blueprints/blob/41cd48f374df7118ceb0307219e056f4f34d16cd/blueprints/automation/calendar-check-inout.yaml
   author: 9V1KG Klaus
   homeassistant:
     min_version: 2024.7.0
@@ -144,8 +144,8 @@ blueprint:
           description: >
             Choose the **calendar entity**, where the check-in/out event should be recorded.
           selector:
-            target:
-              entity:           
+            entity:
+              filter:           
                 - domain: calendar
 
         cal_title:
@@ -213,6 +213,7 @@ variables:
   act_dt_on: !input dt_check_in
   act_min: !input on_minutes
   act_reset_minutes: !input reset_minutes
+  act_calendar: !input my_calendar
   act_title: !input cal_title
   act_descr: !input cal_descr
   act_speak_on: !input speak_on
@@ -350,7 +351,7 @@ action:
             # Calendar event
           - service: calendar.create_event
             target:
-              entity_id: !input my_calendar
+              entity_id: "{{act_calendar}}"
             data:
               summary: !input cal_title
               description: >
