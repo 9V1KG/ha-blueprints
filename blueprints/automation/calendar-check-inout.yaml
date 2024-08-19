@@ -350,7 +350,7 @@ action:
             # Calendar event
           - service: calendar.create_event
             target:
-              entity_id: calendar.personal
+              entity_id: !input my_calendar
             data:
               summary: !input cal_title
               description: >
